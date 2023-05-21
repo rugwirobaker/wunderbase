@@ -18,6 +18,7 @@ import (
 	"wunderbase/pkg/queryengine"
 
 	"github.com/caarlos0/env/v6"
+	"golang.org/x/exp/slog"
 )
 
 type config struct {
@@ -36,6 +37,14 @@ type config struct {
 	ReadLimitSeconds    int    `env:"READ_LIMIT_SECONDS" envDefault:"10000"`
 	WriteLimitSeconds   int    `env:"WRITE_LIMIT_SECONDS" envDefault:"2000"`
 	HealthEndpoint      string `env:"HEALTH_ENDPOINT" envDefault:"/health"`
+	LogFormat           string `env:"LOG_FORMAT" envDefault:"text"`
+	Timestamp           bool   `env:"TIMESTAMP" envDefault:"false"`
+	Debug               bool   `env:"DEBUG" envDefault:"true"`
+}
+
+var LogLevel struct {
+	sync.Mutex
+	slog.LevelVar
 }
 
 func main() {
@@ -55,7 +64,11 @@ func Run(ctx context.Context, args []string) (err error) {
 
 	config := &config{}
 	if err := env.Parse(config); err != nil {
-		log.Fatalln("parse env", err)
+		return fmt.Errorf("wunderbase: parse env: %w", err)
+	}
+
+	if err := initLogger(config); err != nil {
+		return fmt.Errorf("wunderbase: init logger: %w", err)
 	}
 
 	switch cmd {
@@ -101,9 +114,19 @@ func runServe(ctx context.Context, config *config) (err error) {
 
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
-	go queryengine.Run(ctx, wg, config.QueryEnginePath, config.QueryEnginePort, config.PrismaSchemaFilePath, config.Production)
 
-	log.Printf("Server Listening on: http://%s", config.ListenAddr)
+	err = queryengine.Run(ctx, wg,
+		config.QueryEnginePath,
+		config.QueryEnginePort,
+		config.PrismaSchemaFilePath,
+		config.Production,
+		config.Debug,
+	)
+	if err != nil {
+		return fmt.Errorf("wunderbase: run query engine: %w", err)
+	}
+
+	slog.InfoCtx(ctx, "Server Listening", slog.String("addr", config.ListenAddr))
 	handler := api.NewHandler(config.EnableSleepMode,
 		config.Production,
 		fmt.Sprintf("http://localhost:%s/", config.QueryEnginePort),
@@ -128,11 +151,44 @@ func runServe(ctx context.Context, config *config) (err error) {
 	<-ctx.Done()
 	err = srv.Close()
 	if err != nil {
-		log.Fatalln("close server", err)
+		return fmt.Errorf("wunderbase: close server: %w", err)
 	}
 	log.Println("Server stopped")
 	wg.Done()
 	wg.Wait()
 
 	return nil
+}
+
+func initLogger(config *config) (err error) {
+	// Enable debug logging, if set by the config.
+	if config.Debug {
+		LogLevel.Set(slog.LevelDebug)
+	}
+
+	opts := slog.HandlerOptions{Level: &LogLevel}
+
+	if !config.Timestamp {
+		opts.ReplaceAttr = removeTime
+	}
+
+	var handler slog.Handler
+	switch format := config.LogFormat; format {
+	case "text":
+		handler = slog.NewTextHandler(os.Stderr, &opts)
+	case "json":
+		handler = slog.NewJSONHandler(os.Stderr, &opts)
+	default:
+		return fmt.Errorf("invalid log format: %q", format)
+	}
+
+	slog.SetDefault(slog.New(handler))
+	return
+}
+
+func removeTime(groups []string, a slog.Attr) slog.Attr {
+	if a.Key == slog.TimeKey {
+		return slog.Attr{}
+	}
+	return a
 }
