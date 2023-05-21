@@ -1,0 +1,42 @@
+# This directory is where your application will access the database.
+fuse: 
+  dir: "/app/data"
+
+# This directory is where LiteFS will store internal data.
+# You must place this directory on a persistent volume.
+data: 
+  dir: "/data/litefs"
+
+exit-on-error: true
+
+proxy:
+  # Bind address for the proxy to listen on.
+  addr: ":8080"
+
+  # Hostport of your application.
+  target: "0.0.0.0:4466"
+
+  # Filename of the SQLite database you want to use for TXID tracking.
+  db: "txid.db"
+
+
+# Execute this subprocess once LiteFS connects to the cluster. 
+exec:
+  - cmd: "wunderbase migrate"
+    if-candidate: true
+
+  - cmd: "wunderbase serve"
+
+# These environment variables will be available in your Fly.io application.
+# You must specify "experiement.enable_consul" for FLY_CONSUL_URL to be available.
+lease:
+  type: "consul"
+  hostname: "${HOSTNAME}"
+  advertise-url: "http://${HOSTNAME}.vm.${FLY_APP_NAME}.internal:20202"
+  candidate: ${FLY_REGION == PRIMARY_REGION}
+  promote: true
+  consul: 
+    key: "litefs/${FLY_APP_NAME}"
+    url: "${FLY_CONSUL_URL}"
+
+  

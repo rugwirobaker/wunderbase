@@ -48,6 +48,9 @@ func killExistingPrismaQueryEngineProcess(queryEnginePort string) {
 		_, err = execCmd(exec.Command("Stop-Process", "-Id", command))
 	} else {
 		command := fmt.Sprintf("lsof -i tcp:%s | grep LISTEN | awk '{print $2}' | xargs kill -9", queryEnginePort)
+		if command == "" {
+			return
+		}
 		var data []byte
 		data, err = execCmd(exec.Command("sh", "-c", command))
 		if err == nil && len(data) > 0 {
