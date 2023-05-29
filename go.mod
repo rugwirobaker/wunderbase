@@ -6,8 +6,10 @@ require (
 	github.com/buger/jsonparser v1.1.1
 	github.com/caarlos0/env/v6 v6.10.0
 	github.com/gavv/httpexpect/v2 v2.3.1
+	github.com/stretchr/testify v1.8.0
 	github.com/wundergraph/graphql-go-tools v1.53.0
 	go.uber.org/ratelimit v0.2.0
+	golang.org/x/exp v0.0.0-20230519143937-03e91628a987
 )
 
 require (
@@ -24,7 +26,6 @@ require (
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sergi/go-diff v1.0.0 // indirect
-	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/tidwall/gjson v1.14.3 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
@@ -38,7 +39,6 @@ require (
 	github.com/yudai/gojsondiff v1.0.0 // indirect
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2 // indirect
-	golang.org/x/sys v0.0.0-20220907062415-87db552b00fd // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	moul.io/http2curl v1.0.1-0.20190925090545-5cd742060b0e // indirect
